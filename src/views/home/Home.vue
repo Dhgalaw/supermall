@@ -1,6 +1,12 @@
 <template>
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
+    <tab-control :titles="['流行','最新','热门']"
+                  @tabClick="tabClick"
+                  ref="tabControlfix"
+                  class="tabControl"
+                  v-show="this.tabControlFix"
+                  />
 
     <scroll class="content" 
             ref="scroll" 
@@ -9,11 +15,13 @@
             @scroll="scrollContent"
             @loadMore="loadMore"
             >
-      <home-swiper :banners="banners"></home-swiper>
+      <home-swiper :banners="banners" 
+                   @isLoad="isLoad" />
       <recommend-view :recommends="recommends" />
       <feature-views/>
       <tab-control :titles="['流行','最新','热门']"
-                  @tabClick="tabClick"/>
+                  @tabClick="tabClick"
+                  ref="tabControl"/>
       <goods-list :goods="showGoods"/>
 
 
@@ -168,7 +176,9 @@
           'sell': {page: 0, list:[] }
         },
         currentType: 'pop',
-        isShowBackTop:false
+        isShowBackTop: false,
+        tabControlHeight: 0,
+        tabControlFix: false
       }
     },
     computed: {
@@ -189,15 +199,34 @@
       
     },
     mounted() {
-      //监听item中图片加载完成 使用事件总线
+      //监听item中图片加载完成，使用事件总裁
+      this.$bus.$on('itemImageLoad',() => {
+        this.$refs.scroll.refresh()
+      })
+      /*方法二 但是apply报错
+      this.$bus.$on('itemImageLoad',() => {
+        this.$refs.scroll.refresh()
+      }
+
+
       const refresh = this.debounce(this.$refs.scroll.refresh(),500)
       this.$bus.$on('itemImageLoad',() => {
         refresh()
       });
+      */
+
+      //所有的组件都有一个$el属性，用于获取元素
+      // if (this.swiperImageLoad == true) {
+      //   console.log(this.$refs.tabControl.$el.offsetTop);
+      // }
+      
+
+
     },
+    
     methods: {
 
-      //事件监听相关的方法
+      //事件监听相关的方法，apply报错未解决
       debounce(func,delay) {
         let timer = null
         return function(...args) {
@@ -220,19 +249,33 @@
             this.currentType = 'sell'
             break
         }
+        this.$refs.tabControlfix.currentIndex = index
+        this.$refs.tabControl.currentIndex = index
       },
       backClick() {
         this.$refs.scroll.scrollTo(0,0,300);
       },
       scrollContent(position) {
         // console.log(position);
-        if (position.y < -3000) {
+        if (-position.y > 3000) {
           this.isShowBackTop = true;
+        }
+        if (-position.y >= this.tabControlHeight) {
+          this.tabControlFix = true
+        } else {
+          this.tabControlFix = false
         }
       },
       loadMore() {
         console.log("加载更多");
         this.getHomeGoods(this.currentType);
+        
+      },
+      isLoad() {
+        
+        this.tabControlHeight = this.$refs.tabControl.$el.offsetTop
+      
+        console.log(this.tabControlHeight);
         
       },
 
@@ -261,31 +304,32 @@
 
 <style scoped>
   #home {
-    padding-top: 44px;
+    position: relative;
+    /* padding-top: 44px; */
     height: 100vh; /*100%视口*/
   }
 
-  .home-nav {
+  #home .home-nav {
     background-color: var(--color-tint);
     color: white;
-    position: fixed;
+    /* position: fixed;
     left: 0;
     right: 0;
     top: 0;
+    z-index: 9; */
+  }
+
+  #home .tab-control {
+    position: relative;
     z-index: 9;
   }
 
-  .tab-control {
-    position: sticky;
-    top: 44px;
-    background-color: #fff;
-    z-index: 9;
-  }
-
-  .content {
+  #home .content {
     position: absolute;
     top: 44px;
     bottom: 49px;
+    left: 0;
+    right: 0;
     overflow: hidden;
     
 
